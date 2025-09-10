@@ -1,0 +1,11 @@
+[package]
+name = "repro-jemalloc"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+# Optional toggle to force Windows to try jemalloc (normally a bad idea)
+force-win = []
+
+[dependencies]
+tikv-jemallocator = { version = "0.6", features = ["unprefixed_malloc_on_supported_platforms"] }

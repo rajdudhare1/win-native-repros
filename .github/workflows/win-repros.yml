@@ -1,0 +1,51 @@
+name: win-repros
+on:
+  push:
+    branches:
+      - 'main'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        repro:
+          # Choose which toolchain to use per repro for fastest success
+          - { name: zlib-msvc,     crate: repro-zlib,     toolchain: msvc, target: x86_64-pc-windows-msvc }
+          - { name: kafka-gnu,     crate: repro-kafka,    toolchain: gnu,  target: x86_64-pc-windows-gnu }
+          - { name: jemalloc-gnu,  crate: repro-jemalloc, toolchain: gnu,  target: x86_64-pc-windows-gnu }
+          # To force a Windows jemalloc failure/demo:
+          # - { name: jemalloc-win-force, crate: repro-jemalloc, toolchain: gnu, target: x86_64-pc-windows-gnu, features: force-win }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Install both targets up front (cheap)
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc,x86_64-pc-windows-gnu
+
+      # Only install MSYS2 when the matrix asks for GNU
+      - name: Setup MSYS2 (only for GNU)
+        if: matrix.repro.toolchain == 'gnu'
+        run: |
+          choco install msys2 -y --no-progress
+          C:\tools\msys64\usr\bin\bash -lc "pacman -Syu --noconfirm"
+          C:\tools\msys64\usr\bin\bash -lc "pacman -S --noconfirm base-devel mingw-w64-x86_64-toolchain mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x86_64-nasm mingw-w64-x86_64-pkg-config autoconf automake libtool"
+          echo "C:\tools\msys64\mingw64\bin" >> $env:GITHUB_PATH
+
+      # Select the toolchain per job (MSVC or GNU)
+      - name: Select toolchain
+        run: rustup default ${{ matrix.repro.target }}
+
+      # Build the selected crate
+      - name: Build repro
+        env:
+          # Scope GNU tools to this step only (harmless for MSVC)
+          CC: ${{ matrix.repro.toolchain == 'gnu' && 'x86_64-w64-mingw32-gcc' || '' }}
+          CXX: ${{ matrix.repro.toolchain == 'gnu' && 'x86_64-w64-mingw32-g++' || '' }}
+          AR: ${{ matrix.repro.toolchain == 'gnu' && 'x86_64-w64-mingw32-ar' || '' }}
+          RUST_BACKTRACE: "1"
+        run: |
+          cargo build -p ${{ matrix.repro.crate }} -vv ${{ matrix.repro.features && format(' --features {0}', matrix.repro.features) || '' }}

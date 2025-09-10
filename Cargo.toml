@@ -1,0 +1,13 @@
+[workspace]
+members = [
+  "crates/repro-zlib",
+  "crates/repro-kafka",
+  "crates/repro-jemalloc",
+]
+
+# Keep builds snappy for repros
+[profile.dev]
+codegen-units = 1
+
+[profile.release]
+codegen-units = 1

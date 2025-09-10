@@ -1,0 +1,8 @@
+[package]
+name = "repro-kafka"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Minimal feature set; cmake-build vendors librdkafka on Windows
+rdkafka = { version = "0.36", default-features = false, features = ["cmake-build"] }

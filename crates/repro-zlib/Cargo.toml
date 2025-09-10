@@ -1,0 +1,11 @@
+[package]
+name = "repro-zlib"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Matches what refinery/libz-sys pulls; feel free to adjust version
+libz-sys = "1.1.22"
+
+# Try this if you want to force static build (optional):
+# libz-sys = { version = "1.1.22", features = ["static"] }
