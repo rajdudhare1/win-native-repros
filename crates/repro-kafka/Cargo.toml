@@ -5,4 +5,4 @@ edition = "2021"
 
 [dependencies]
 # Minimal feature set; cmake-build vendors librdkafka on Windows
-rdkafka = { version = "0.36", default-features = false, features = ["cmake-build"] }
+rdkafka = { version = "0.37", features = ["cmake-build", "tracing", "sasl", "ssl-vendored", "zstd"] }
