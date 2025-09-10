@@ -57,27 +57,38 @@ jobs:
           cargo build -p ${{ matrix.repro.crate }} --target x86_64-pc-windows-gnu -vv
 
       # ---------- Kafka MSVC build ----------
-      - name: Install vcpkg & build Kafka repro (MSVC)
+      - name: Install vcpkg deps for Kafka
+        if: matrix.repro.crate == 'repro-kafka'
+        shell: pwsh
+        run: |
+            choco install cmake ninja nasm strawberryperl -y --no-progress
+            & C:\vcpkg\vcpkg.exe integrate install
+            & C:\vcpkg\vcpkg.exe install cyrus-sasl:x64-windows zstd:x64-windows
+            & C:\vcpkg\vcpkg.exe list
+            Write-Host "=== SASL libs ==="
+            dir "C:\vcpkg\installed\x64-windows\lib\*sasl*.lib"
+            Write-Host "=== SASL headers ==="
+            dir "C:\vcpkg\installed\x64-windows\include\sasl"
+            Write-Host "VCPKG_ROOT=$env:VCPKG_ROOT"
+
+      - name: Build Kafka repro (MSVC)
         if: matrix.repro.crate == 'repro-kafka'
         shell: pwsh
         env:
-          RUST_BACKTRACE: "1"
-          CMAKE_TOOLCHAIN_FILE: C:\vcpkg\scripts\buildsystems\vcpkg.cmake
-          VCPKG_ROOT: C:\vcpkg
-          VCPKG_DEFAULT_TRIPLET: x64-windows
-          VCPKG_TARGET_TRIPLET:  x64-windows
-          SASL2_DIR:        C:\vcpkg\installed\x64-windows
-          SASL2_INCLUDE_DIR: C:\vcpkg\installed\x64-windows\include
-          SASL2_LIB_DIR:    C:\vcpkg\installed\x64-windows\lib
-          ZSTD_DIR:         C:\vcpkg\installed\x64-windows
-          ZSTD_INCLUDE_DIR: C:\vcpkg\installed\x64-windows\include
-          ZSTD_LIB_DIR:     C:\vcpkg\installed\x64-windows\lib
-          OPENSSL_NO_VENDOR: ""   # keep vendored OpenSSL
+            RUST_BACKTRACE: "1"
+            CMAKE_TOOLCHAIN_FILE: C:\vcpkg\scripts\buildsystems\vcpkg.cmake
+            VCPKG_ROOT: C:\vcpkg
+            VCPKG_DEFAULT_TRIPLET: x64-windows
+            VCPKG_TARGET_TRIPLET:  x64-windows
+            SASL2_DIR:        C:\vcpkg\installed\x64-windows
+            SASL2_INCLUDE_DIR: C:\vcpkg\installed\x64-windows\include
+            SASL2_LIB_DIR:    C:\vcpkg\installed\x64-windows\lib
+            ZSTD_DIR:         C:\vcpkg\installed\x64-windows
+            ZSTD_INCLUDE_DIR: C:\vcpkg\installed\x64-windows\include
+            ZSTD_LIB_DIR:     C:\vcpkg\installed\x64-windows\lib
+            OPENSSL_NO_VENDOR: ""   # let openssl-sys build its own
         run: |
-          choco install cmake ninja nasm strawberryperl -y --no-progress
-          & C:\vcpkg\vcpkg.exe integrate install
-          & C:\vcpkg\vcpkg.exe install cyrus-sasl:x64-windows zstd:x64-windows
-          cargo build -p repro-kafka -vv
+            cargo build -p repro-kafka -vv
 
       # ---------- Artifacts (optional; helps inspect outputs) ----------
       - name: Upload artifact
