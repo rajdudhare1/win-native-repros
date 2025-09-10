@@ -63,7 +63,7 @@ jobs:
         run: |
             choco install cmake ninja nasm strawberryperl -y --no-progress
             & C:\vcpkg\vcpkg.exe integrate install
-            & C:\vcpkg\vcpkg.exe install cyrus-sasl:x64-windows zstd:x64-windows
+            & C:\vcpkg\vcpkg.exe install cyrus-sasl:x64-windows zstd:x64-windows openssl:x64-windows
             & C:\vcpkg\vcpkg.exe list
             Write-Host "=== SASL libs ==="
             dir "C:\vcpkg\installed\x64-windows\lib\*sasl*.lib"
@@ -75,6 +75,10 @@ jobs:
         if: matrix.repro.crate == 'repro-kafka'
         shell: pwsh
         env:
+            OPENSSL_DIR:        C:\vcpkg\installed\x64-windows
+            OPENSSL_ROOT_DIR:   C:\vcpkg\installed\x64-windows
+            OPENSSL_LIB_DIR:    C:\vcpkg\installed\x64-windows\lib
+            OPENSSL_INCLUDE_DIR: C:\vcpkg\installed\x64-windows\include
             RUST_BACKTRACE: "1"
             CMAKE_TOOLCHAIN_FILE: C:\vcpkg\scripts\buildsystems\vcpkg.cmake
             VCPKG_ROOT: C:\vcpkg
