@@ -12,13 +12,13 @@ jobs:
       matrix:
         repro:
           - { name: zlib-msvc,    crate: repro-zlib,     toolchain: msvc }
-          - { name: kafka-gnu,    crate: repro-kafka,    toolchain: msvc }
+          - { name: kafka-msvc,   crate: repro-kafka,    toolchain: msvc }
           - { name: jemalloc-gnu, crate: repro-jemalloc, toolchain: gnu }
 
     steps:
       - uses: actions/checkout@v4
 
-      # Install Rust host toolchain (MSVC) and also the GNU target for cross builds
+      # Install Rust host toolchain (MSVC) and also GNU target for jemalloc repro
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-pc-windows-gnu
@@ -35,9 +35,9 @@ jobs:
             mingw-w64-x86_64-pkg-config autoconf automake libtool"
           echo "C:\tools\msys64\mingw64\bin" >> $env:GITHUB_PATH
 
-      # ---------- MSVC build (host toolchain) ----------
+      # ---------- MSVC build (host toolchain, non-Kafka) ----------
       - name: Build ${{ matrix.repro.name }} (MSVC)
-        if: matrix.repro.toolchain == 'msvc'
+        if: matrix.repro.toolchain == 'msvc' && matrix.repro.crate != 'repro-kafka'
         env:
           RUST_BACKTRACE: "1"
         run: |
@@ -56,6 +56,29 @@ jobs:
           rustup target add x86_64-pc-windows-gnu
           cargo build -p ${{ matrix.repro.crate }} --target x86_64-pc-windows-gnu -vv
 
+      # ---------- Kafka MSVC build ----------
+      - name: Install vcpkg & build Kafka repro (MSVC)
+        if: matrix.repro.crate == 'repro-kafka'
+        shell: pwsh
+        env:
+          RUST_BACKTRACE: "1"
+          CMAKE_TOOLCHAIN_FILE: C:\vcpkg\scripts\buildsystems\vcpkg.cmake
+          VCPKG_ROOT: C:\vcpkg
+          VCPKG_DEFAULT_TRIPLET: x64-windows
+          VCPKG_TARGET_TRIPLET:  x64-windows
+          SASL2_DIR:        C:\vcpkg\installed\x64-windows
+          SASL2_INCLUDE_DIR: C:\vcpkg\installed\x64-windows\include
+          SASL2_LIB_DIR:    C:\vcpkg\installed\x64-windows\lib
+          ZSTD_DIR:         C:\vcpkg\installed\x64-windows
+          ZSTD_INCLUDE_DIR: C:\vcpkg\installed\x64-windows\include
+          ZSTD_LIB_DIR:     C:\vcpkg\installed\x64-windows\lib
+          OPENSSL_NO_VENDOR: ""   # keep vendored OpenSSL
+        run: |
+          choco install cmake ninja nasm strawberryperl -y --no-progress
+          & C:\vcpkg\vcpkg.exe integrate install
+          & C:\vcpkg\vcpkg.exe install cyrus-sasl:x64-windows zstd:x64-windows
+          cargo build -p repro-kafka -vv
+
       # ---------- Artifacts (optional; helps inspect outputs) ----------
       - name: Upload artifact
         if: always()
@@ -63,7 +86,7 @@ jobs:
         with:
           name: ${{ matrix.repro.name }}
           path: |
-            target\**\${{ matrix.repro.crate }}.exe
-            target\**\${{ matrix.repro.crate }}.dll
-            target\**\${{ matrix.repro.crate }}.pyd
+            target\**\${{ matrix.repro.crate }}*.exe
+            target\**\*.dll
+            target\**\*.pyd
           if-no-files-found: warn
