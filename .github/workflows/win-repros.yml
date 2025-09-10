@@ -12,7 +12,7 @@ jobs:
       matrix:
         repro:
           - { name: zlib-msvc,    crate: repro-zlib,     toolchain: msvc }
-          - { name: kafka-gnu,    crate: repro-kafka,    toolchain: gnu }
+          - { name: kafka-gnu,    crate: repro-kafka,    toolchain: msvc }
           - { name: jemalloc-gnu, crate: repro-jemalloc, toolchain: gnu }
 
     steps:
